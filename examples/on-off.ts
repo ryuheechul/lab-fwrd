@@ -1,5 +1,5 @@
-import { match, P } from "npm:ts-pattern";
-import { genInitialForward } from "../machine.ts";
+import { match, P } from 'npm:ts-pattern';
+import { genInitialForward, timeout } from '../machine.ts';
 
 export enum State {
   off,
@@ -20,9 +20,9 @@ export type DelayOn = {
 };
 
 // helper function to create On event
-export const delayOn = (delay: DelayOn["delay"] | typeof P._): DelayOn => ({
+export const delayOn = (delay: DelayOn['delay'] | typeof P._): DelayOn => ({
   _event: Events.on,
-  delay: delay as DelayOn["delay"],
+  delay: delay as DelayOn['delay'],
 });
 
 // another event with parameter
@@ -32,16 +32,12 @@ export type DelayOff = {
 };
 
 // helper function to create Off event
-export const delayOff = (delay: DelayOff["delay"] | typeof P._): DelayOff => ({
+export const delayOff = (delay: DelayOff['delay'] | typeof P._): DelayOff => ({
   _event: Events.off,
-  delay: delay as DelayOff["delay"],
+  delay: delay as DelayOff['delay'],
 });
 
 type Event = Events | DelayOn | DelayOff;
-
-function timeout(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 const handle = async (s: State, e: Event) =>
   await match(e)
