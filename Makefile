@@ -1,6 +1,6 @@
 .PHONY: run
 run: fmt
-	deno run on-off.ts
+	deno run ./examples/runners/on-off.ts
 
 .PHONY: fmt
 fmt:

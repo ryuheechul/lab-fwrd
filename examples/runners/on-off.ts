@@ -1,15 +1,10 @@
 // usage examples
 
-import {
-  delayOff,
-  delayOn,
-  Events,
-  initialForward,
-  Reaction,
-  State,
-} from "./machine.ts";
+import { delayOff, delayOn, Events, initialForward, State } from "../on-off.ts";
 
-const r: Reaction = {
+import { Reaction } from "../../machine.ts";
+
+const r: Reaction<State> = {
   [State.on]: {
     entry: (state) => console.log(state, "reaction for on"),
   },
