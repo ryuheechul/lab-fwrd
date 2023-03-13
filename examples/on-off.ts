@@ -19,7 +19,7 @@ export type DelayedOn = {
   delay: number; // in sec
 };
 
-// helper function to create On event
+// helper function to create on event
 export const delayedOn = (
   delay: DelayedOn['delay'] | typeof P._,
 ): DelayedOn => ({
@@ -33,7 +33,7 @@ export type DelayedOff = {
   delay: number; // in sec
 };
 
-// helper function to create Off event
+// helper function to create off event
 export const delayedOff = (
   delay: DelayedOff['delay'] | typeof P._,
 ): DelayedOff => ({
@@ -41,11 +41,26 @@ export const delayedOff = (
   delay: delay as DelayedOff['delay'],
 });
 
-export type Event = Events | DelayedOn | DelayedOff;
+export type DelayedToggle = {
+  _event: Events.toggle;
+  delay: number; // in sec
+};
+
+// helper function to create toggle event
+export const delayedToggle = (
+  delay: DelayedToggle['delay'] | typeof P._,
+): DelayedToggle => ({
+  _event: Events.toggle,
+  delay: delay as DelayedToggle['delay'],
+});
+
+export type Event = Events | DelayedOn | DelayedOff | DelayedToggle;
+
+const toggle = (s: State) => s == State.off ? State.on : State.off;
 
 const handle = async (s: State, e: Event) =>
   await match(e)
-    .with(Events.toggle, () => s == State.off ? State.on : State.off)
+    .with(Events.toggle, () => toggle(s))
     .with(Events.on, () => State.on)
     .with(Events.off, () => State.off)
     .with(delayedOn(P.number), async ({ delay }) => {
@@ -55,6 +70,10 @@ const handle = async (s: State, e: Event) =>
     .with(delayedOff(P.number), async ({ delay }) => {
       await timeout(delay * 1000);
       return State.off;
+    })
+    .with(delayedToggle(P.number), async ({ delay }) => {
+      await timeout(delay * 1000);
+      return toggle(s);
     })
     .exhaustive();
 

@@ -1,5 +1,6 @@
 import { match, P } from 'npm:ts-pattern';
-import { genInterfaces, timeout } from '../fwrd/mod.ts';
+import { genDefineInit, genInterfaces, timeout } from '../fwrd/mod.ts';
+import * as OnOff from './on-off.ts';
 
 export enum State {
   green,
@@ -40,25 +41,38 @@ const handle = async (s: State, e: Event) =>
     })
     .exhaustive();
 
-const { initialForward, defineReaction } = genInterfaces<State, Event>(handle);
-
-function contextPerState(state: State) {
+export function contextPerState(state: State) {
   return match(state)
-    .with(State.green, () => ({ name: 'green', delay: 3 }))
-    .with(State.yellow, () => ({ name: 'yellow', delay: 1 }))
-    .with(State.red, () => ({ name: 'red', delay: 2 }))
+    .with(State.green, () => ({ name: '[green]', delay: 3 }))
+    .with(State.yellow, () => ({ name: '[yellow]', delay: 1 }))
+    .with(State.red, () => ({ name: '[red]', delay: 2 }))
     .exhaustive();
 }
 
-const reaction = defineReaction({
-  '*': {
-    entry: (state, forward) => {
-      const { name, delay } = contextPerState(state);
-      console.log(`entered ${name} light and will wait for ${delay} seconds`);
-      forward(delayedNext(delay));
+const defineInit = genDefineInit<State, Event>();
+
+const init = defineInit((fetch) => {
+  const { defineReaction, initialForward, delayedToggle } = OnOff;
+
+  const reaction = defineReaction({
+    '*': {
+      entry: async (_onOffState, onOffForward) => {
+        const { forward } = fetch();
+
+        const state = await forward(delayedNext(0));
+        const { name, delay } = contextPerState(state);
+        console.log(`entered ${name} light and will wait for ${delay} seconds`);
+        onOffForward(delayedToggle(delay));
+      },
     },
-  },
+  });
+
+  initialForward(OnOff.State.off, { reaction });
 });
 
-export const startTrafficLights = (state: State) =>
-  initialForward(state, { reaction });
+export const { initialForwarder, defineReaction } = genInterfaces<State, Event>(
+  handle,
+  init,
+);
+
+export const startTrafficLights = initialForwarder;

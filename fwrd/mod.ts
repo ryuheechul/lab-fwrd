@@ -2,6 +2,11 @@ type StateToState<S, E> = (s: S, e: E) => Promise<S>;
 type ForwardReturn<S, E> = { state: S; forward: Forward<S, E> };
 
 type Forward<S, E> = (e: E, s?: S) => Promise<ForwardReturn<S, E>>;
+type ForwardStateOnly<S, E> = (e: E, s?: S) => Promise<S>;
+type FetchForwardState<S, E> = {
+  state: S;
+  forward: ForwardStateOnly<S, E>;
+};
 
 type ReactionHandler<S, E> = (s: S, f: Forward<S, E>) => void;
 
@@ -80,18 +85,21 @@ type ForwardFactoryOptions<S extends Keyable, E> = {
   skipInitialReaction?: boolean;
 };
 
-// "FP" style (but still stateful unless optional state is provided to `forward`)
+// "FP" style and:
+// - still stateful
+// - "old state" can be provided instead of remember (via `forward`)
+//   - exit reaction will still be fired for the real old state
 function genForward<S extends Keyable, E>(
   handle: StateToState<S, E>,
 ) {
   const forwardFactory = (
     state: S,
-    options: ForwardFactoryOptions<S, E> = {
-      reaction: {},
-      skipInitialReaction: false,
-    },
+    options: ForwardFactoryOptions<S, E> = {},
   ) => {
-    const { reaction = {}, skipInitialReaction = false } = options;
+    const {
+      reaction = {},
+      skipInitialReaction = false,
+    } = options;
 
     return {
       state: reactOnEntry(skipInitialReaction, state, reaction, handle),
@@ -120,9 +128,14 @@ function genForward<S extends Keyable, E>(
   return forwardFactory;
 }
 
+type Init<S, E> = (f: () => FetchForwardState<S, E>) => void;
+export const genDefineInit = <S extends Keyable, E>() => (init: Init<S, E>) =>
+  init;
+
 // "OOP" style
 function genForwarder<S extends Keyable, E>(
   handle: StateToState<S, E>,
+  init?: Init<S, E>,
 ) {
   const factory = genForward(handle);
 
@@ -138,12 +151,23 @@ function genForwarder<S extends Keyable, E>(
       options,
     );
 
-    const forward = async (e: E) => {
-      const { state: s, forward: f } = await privateForward(e);
-      privateForward = f;
+    let trackedState = state;
 
-      return s;
+    const forward = async (e: E, s = trackedState) => {
+      const { state: ns, forward: f } = await privateForward(e, s);
+      privateForward = f;
+      trackedState = ns;
+
+      return ns;
     };
+
+    if (init) {
+      const fetch = () => ({
+        state: trackedState,
+        forward,
+      });
+      init(fetch);
+    }
 
     return forward;
   };
@@ -156,8 +180,9 @@ const genDefineReaction =
 // `export const { ... } = genInterfaces<S..., E...>`
 export const genInterfaces = <S extends Keyable, E>(
   handle: StateToState<S, E>,
+  init?: Init<S, E>,
 ) => ({
   initialForward: genForward<S, E>(handle),
-  initialForwarder: genForwarder<S, E>(handle),
+  initialForwarder: genForwarder<S, E>(handle, init),
   defineReaction: genDefineReaction<S, E>(),
 });
