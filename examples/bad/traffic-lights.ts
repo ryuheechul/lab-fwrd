@@ -1,4 +1,4 @@
-import { match, P } from 'npm:ts-pattern';
+import { match, P } from 'ts-pattern';
 import { genInterfaces, timeout } from '../../fwrd/mod.ts';
 
 export enum State {
@@ -36,9 +36,9 @@ const handle = async (s: State, e: Event) =>
         .with(State.green, () => State.yellow)
         .with(State.yellow, () => State.red)
         .with(State.red, () => State.green)
-        .exhaustive();
+        .run();
     })
-    .exhaustive();
+    .run();
 
 const { initialForward, defineReaction } = genInterfaces<State, Event>(handle);
 
@@ -47,7 +47,7 @@ function contextPerState(state: State) {
     .with(State.green, () => ({ name: 'green', delay: 3 }))
     .with(State.yellow, () => ({ name: 'yellow', delay: 1 }))
     .with(State.red, () => ({ name: 'red', delay: 2 }))
-    .exhaustive();
+    .run();
 }
 
 // WARNING: consuming reaction from machine itself is bad as the user can't use this feature to subscribe changes

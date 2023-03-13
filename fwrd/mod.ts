@@ -44,9 +44,11 @@ const reactOnExit = <S extends Keyable, R extends Reaction<S, E>, E>(
   if (oldS == newS) return newS; // NOTE: equal check might get more complicated later
 
   // with generic signature upfront but same thing as the one in reactOnEntry
-  const forward: Forward<S, E> =
-    genForward<S, E>(handle)(oldS, { reaction: r, skipInitialReaction: true })
-      .forward;
+  const forward: Forward<S, E> = genForward<S, E>(handle)(oldS, {
+    reaction: r,
+    skipInitialReaction: true,
+  })
+    .forward;
 
   const action = r[oldS]?.exit;
   if (action) action(oldS, forward);
@@ -133,7 +135,7 @@ export const genDefineInit = <S extends Keyable, E>() => (init: Init<S, E>) =>
   init;
 
 // "OOP" style
-function genForwarder<S extends Keyable, E>(
+function createMachine<S extends Keyable, E>(
   handle: StateToState<S, E>,
   init?: Init<S, E>,
 ) {
@@ -183,6 +185,6 @@ export const genInterfaces = <S extends Keyable, E>(
   init?: Init<S, E>,
 ) => ({
   initialForward: genForward<S, E>(handle),
-  initialForwarder: genForwarder<S, E>(handle, init),
+  createMachine: createMachine<S, E>(handle, init),
   defineReaction: genDefineReaction<S, E>(),
 });

@@ -9,9 +9,10 @@ It's my lab:
 
 ```bash
 ./
-├── fwrd/        # the core/API - pure typescript module that is runnable via deno
-└── examples/    # example machines that uses `fwrd` module - written for deno
-   └── runners/  # runnable via deno
+├── fwrd/         # the core/API - pure typescript module that is runnable via deno
+├── examples/     # example machines that uses `fwrd` module - written for deno
+│   └── runners/  # runnable via deno
+└── web/          # examples for web platform via Svelte
 ```
 
 ## Run Examples

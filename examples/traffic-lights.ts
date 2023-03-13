@@ -1,4 +1,4 @@
-import { match, P } from 'npm:ts-pattern';
+import { match, P } from 'ts-pattern';
 import { genDefineInit, genInterfaces, timeout } from '../fwrd/mod.ts';
 import * as OnOff from './on-off.ts';
 
@@ -37,16 +37,16 @@ const handle = async (s: State, e: Event) =>
         .with(State.green, () => State.yellow)
         .with(State.yellow, () => State.red)
         .with(State.red, () => State.green)
-        .exhaustive();
+        .run();
     })
-    .exhaustive();
+    .run();
 
 export function contextPerState(state: State) {
   return match(state)
     .with(State.green, () => ({ name: '[green]', delay: 3 }))
     .with(State.yellow, () => ({ name: '[yellow]', delay: 1 }))
     .with(State.red, () => ({ name: '[red]', delay: 2 }))
-    .exhaustive();
+    .run();
 }
 
 const defineInit = genDefineInit<State, Event>();
@@ -70,9 +70,7 @@ const init = defineInit((fetch) => {
   initialForward(OnOff.State.off, { reaction });
 });
 
-export const { initialForwarder, defineReaction } = genInterfaces<State, Event>(
+export const { createMachine, defineReaction } = genInterfaces<State, Event>(
   handle,
   init,
 );
-
-export const startTrafficLights = initialForwarder;

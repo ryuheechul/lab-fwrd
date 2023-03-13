@@ -1,12 +1,12 @@
 // usage examples
 
 import {
+  createMachine,
   defineReaction,
   delayedOff,
   delayedOn,
   Events,
   initialForward,
-  initialForwarder,
   State,
 } from '../on-off.ts';
 
@@ -36,7 +36,7 @@ async function runnerInFPStyle() {
 async function runnerInOOPStyle() {
   console.log('trying OOP style');
   let state = State.off;
-  const forward = initialForwarder(state, { reaction });
+  const forward = createMachine(state, { reaction });
 
   console.log(`forward from ${state} with delayedOn(2)`);
   state = await forward(delayedOn(2));

@@ -1,4 +1,7 @@
 {
+  "imports": {
+    "ts-pattern": "npm:ts-pattern@^4.2"
+  },
   // https://deno.land/manual@v1.31.2/getting_started/configuration_file#fmt
   "fmt": {
     "options": {

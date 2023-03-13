@@ -1,4 +1,4 @@
-import { match, P } from 'npm:ts-pattern';
+import { match, P } from 'ts-pattern';
 import { genInterfaces, timeout } from '../fwrd/mod.ts';
 
 export enum State {
@@ -75,10 +75,13 @@ const handle = async (s: State, e: Event) =>
       await timeout(delay * 1000);
       return toggle(s);
     })
-    .exhaustive();
+    .run();
 
-export const { initialForward, initialForwarder, defineReaction } =
-  genInterfaces<
-    State,
-    Event
-  >(handle);
+export const toBoolean = (s: State) => (s == State.off ? false : true);
+
+export const { initialForward, createMachine, defineReaction } = genInterfaces<
+  State,
+  Event
+>(
+  handle,
+);
