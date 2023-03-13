@@ -1,5 +1,5 @@
 import { match, P } from 'npm:ts-pattern';
-import { genInterfaces, timeout } from '../machine.ts';
+import { genInterfaces, timeout } from '../fwrd/mod.ts';
 
 export enum State {
   green,

@@ -1,7 +1,8 @@
 .PHONY: run
 run: fmt
-	deno run ./examples/runners/all.ts
+	cd examples && $(MAKE) run
 
 .PHONY: fmt
 fmt:
-	deno fmt
+	cd fwrd && $(MAKE) fmt
+	cd examples && $(MAKE) fmt
