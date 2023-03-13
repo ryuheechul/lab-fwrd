@@ -70,6 +70,7 @@ const reactOnEntry = <S extends Keyable, R extends Reaction<S, E>, E>(
   return state; // to make it chainable
 };
 
+// "FP" style
 function genForward<S extends Keyable, E>(
   handle: StateToState<S, E>,
 ) {
@@ -98,3 +99,33 @@ function genForward<S extends Keyable, E>(
 }
 
 export const genInitialForward = genForward;
+
+// "OOP" style
+function genForwarder<S extends Keyable, E>(
+  handle: StateToState<S, E>,
+) {
+  const factory = genForward(handle);
+
+  return (
+    state: S,
+    reaction: Reaction<S, E> = {},
+    skipInitialReaction = false,
+  ) => {
+    let { forward: privateForward } = factory(
+      state,
+      reaction,
+      skipInitialReaction,
+    );
+
+    const forward = async (e: E) => {
+      const { state: s, forward: f } = await privateForward(e);
+      privateForward = f;
+
+      return s;
+    };
+
+    return forward;
+  };
+}
+
+export const genInitialForwarder = genForwarder;

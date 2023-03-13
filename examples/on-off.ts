@@ -1,5 +1,5 @@
 import { match, P } from 'npm:ts-pattern';
-import { genInitialForward, timeout } from '../machine.ts';
+import { genInitialForward, genInitialForwarder, timeout } from '../machine.ts';
 
 export enum State {
   off,
@@ -14,44 +14,50 @@ export enum Events {
 }
 
 // an event with parameter
-export type DelayOn = {
+export type DelayedOn = {
   _event: Events.on;
   delay: number; // in sec
 };
 
 // helper function to create On event
-export const delayOn = (delay: DelayOn['delay'] | typeof P._): DelayOn => ({
+export const delayedOn = (
+  delay: DelayedOn['delay'] | typeof P._,
+): DelayedOn => ({
   _event: Events.on,
-  delay: delay as DelayOn['delay'],
+  delay: delay as DelayedOn['delay'],
 });
 
 // another event with parameter
-export type DelayOff = {
+export type DelayedOff = {
   _event: Events.off;
   delay: number; // in sec
 };
 
 // helper function to create Off event
-export const delayOff = (delay: DelayOff['delay'] | typeof P._): DelayOff => ({
+export const delayedOff = (
+  delay: DelayedOff['delay'] | typeof P._,
+): DelayedOff => ({
   _event: Events.off,
-  delay: delay as DelayOff['delay'],
+  delay: delay as DelayedOff['delay'],
 });
 
-type Event = Events | DelayOn | DelayOff;
+export type Event = Events | DelayedOn | DelayedOff;
 
 const handle = async (s: State, e: Event) =>
   await match(e)
     .with(Events.toggle, () => s == State.off ? State.on : State.off)
     .with(Events.on, () => State.on)
     .with(Events.off, () => State.off)
-    .with(delayOn(P.number), async ({ delay }) => {
+    .with(delayedOn(P.number), async ({ delay }) => {
       await timeout(delay * 1000);
       return State.on;
     })
-    .with(delayOff(P.number), async ({ delay }) => {
+    .with(delayedOff(P.number), async ({ delay }) => {
       await timeout(delay * 1000);
       return State.off;
     })
     .exhaustive();
 
 export const initialForward = genInitialForward<State, Event>(handle);
+
+export const initialForwarder = genInitialForwarder<State, Event>(handle);
