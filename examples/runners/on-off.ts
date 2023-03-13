@@ -12,7 +12,7 @@ import {
 
 import { Reaction } from '../../machine.ts';
 
-const r: Reaction<State, Event> = {
+const reaction: Reaction<State, Event> = {
   [State.on]: {
     entry: (state) => console.log(`[entry reaction] for ${state}`),
   },
@@ -24,7 +24,7 @@ const r: Reaction<State, Event> = {
 
 async function runnerInFPStyle() {
   console.log('trying FP style');
-  let { state, forward } = initialForward(State.off, r);
+  let { state, forward } = initialForward(State.off, { reaction });
 
   console.log(`forward from ${state} with delayedOn(2)`);
   ({ state, forward } = await forward(delayedOn(2)));
@@ -38,7 +38,7 @@ async function runnerInFPStyle() {
 async function runnerInOOPStyle() {
   console.log('trying OOP style');
   let state = State.off;
-  const forward = initialForwarder(state, r);
+  const forward = initialForwarder(state, { reaction });
 
   console.log(`forward from ${state} with delayedOn(2)`);
   state = await forward(delayedOn(2));

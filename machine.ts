@@ -1,8 +1,9 @@
 type StateToState<S, E> = (s: S, e: E) => Promise<S>;
 type ForwardReturn<S, E> = { state: S; forward: Forward<S, E> };
-type Forward<S, E> = (e: E) => Promise<ForwardReturn<S, E>>;
 
-type ReactionHandler<S, E> = (state: S, forward: Forward<S, E>) => void;
+type Forward<S, E> = (e: E, s?: S) => Promise<ForwardReturn<S, E>>;
+
+type ReactionHandler<S, E> = (s: S, f: Forward<S, E>) => void;
 
 type ReactionBundle<S, E> = {
   entry?: ReactionHandler<S, E>;
@@ -39,7 +40,8 @@ const reactOnExit = <S extends Keyable, R extends Reaction<S, E>, E>(
 
   // with generic signature upfront but same thing as the one in reactOnEntry
   const forward: Forward<S, E> =
-    genForward<S, E>(handle)(oldS, r, true).forward;
+    genForward<S, E>(handle)(oldS, { reaction: r, skipInitialReaction: true })
+      .forward;
 
   const action = r[oldS]?.exit;
   if (action) action(oldS, forward);
@@ -59,7 +61,10 @@ const reactOnEntry = <S extends Keyable, R extends Reaction<S, E>, E>(
   if (skipInitialReaction) return state;
 
   // without generic signature up front but same thing as the one in reactOnExit
-  const { forward } = genForward<S, E>(handle)(state, r, true);
+  const { forward } = genForward<S, E>(handle)(state, {
+    reaction: r,
+    skipInitialReaction: true,
+  });
 
   const action = r[state]?.entry;
   if (action) action(state, forward);
@@ -70,30 +75,47 @@ const reactOnEntry = <S extends Keyable, R extends Reaction<S, E>, E>(
   return state; // to make it chainable
 };
 
-// "FP" style
+type ForwardFactoryOptions<S extends Keyable, E> = {
+  reaction?: Reaction<S, E>;
+  skipInitialReaction?: boolean;
+};
+
+// "FP" style (but still stateful unless optional state is provided to `forward`)
 function genForward<S extends Keyable, E>(
   handle: StateToState<S, E>,
 ) {
   const forwardFactory = (
     state: S,
-    reaction: Reaction<S, E> = {},
-    skipInitialReaction = false,
-  ) => ({
-    state: reactOnEntry(skipInitialReaction, state, reaction, handle),
-    forward: async (event: E) =>
-      forwardFactory(
-        // this will happen before reactOnEntry on any state
-        // even though it doesn't look that way intuitively
-        reactOnExit(
-          skipInitialReaction,
-          state,
-          await handle(state, event),
-          reaction,
-          handle,
+    options: ForwardFactoryOptions<S, E> = {
+      reaction: {},
+      skipInitialReaction: false,
+    },
+  ) => {
+    const { reaction = {}, skipInitialReaction = false } = options;
+
+    return {
+      state: reactOnEntry(skipInitialReaction, state, reaction, handle),
+      // "oldState" can be manipulated via user by providing one
+      forward: async (
+        event: E,
+        eitherActualOrRequestedPreviousState: S = state,
+      ) =>
+        forwardFactory(
+          // this will happen before reactOnEntry on any state
+          // even though it doesn't look that way intuitively
+          reactOnExit(
+            skipInitialReaction,
+            state, // should react to the actual previous one on exit, thus `state` not `eitherActualOrRequestedPreviousState`
+            await handle(eitherActualOrRequestedPreviousState, event),
+            reaction,
+            handle,
+          ),
+          {
+            reaction,
+          },
         ),
-        reaction,
-      ),
-  });
+    };
+  };
 
   return forwardFactory;
 }
@@ -108,13 +130,14 @@ function genForwarder<S extends Keyable, E>(
 
   return (
     state: S,
-    reaction: Reaction<S, E> = {},
-    skipInitialReaction = false,
+    options: ForwardFactoryOptions<S, E> = {
+      reaction: {},
+      skipInitialReaction: false,
+    },
   ) => {
     let { forward: privateForward } = factory(
       state,
-      reaction,
-      skipInitialReaction,
+      options,
     );
 
     const forward = async (e: E) => {

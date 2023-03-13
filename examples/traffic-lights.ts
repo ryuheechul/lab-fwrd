@@ -54,11 +54,11 @@ const reaction: Reaction<State, Event> = {
   '*': {
     entry: (state, forward) => {
       const { name, delay } = contextPerState(state);
-      console.log(`entered ${name} light and will wait for ${delay}`);
+      console.log(`entered ${name} light and will wait for ${delay} seconds`);
       forward(delayedNext(delay));
     },
   },
 };
 
 export const startTrafficLights = (state: State) =>
-  initialForward(state, reaction);
+  initialForward(state, { reaction });
