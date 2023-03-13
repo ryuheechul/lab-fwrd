@@ -1,18 +1,16 @@
 // usage examples
 
 import {
+  defineReaction,
   delayedOff,
   delayedOn,
-  Event,
   Events,
   initialForward,
   initialForwarder,
   State,
 } from '../on-off.ts';
 
-import { Reaction } from '../../machine.ts';
-
-const reaction: Reaction<State, Event> = {
+const reaction = defineReaction({
   [State.on]: {
     entry: (state) => console.log(`[entry reaction] for ${state}`),
   },
@@ -20,7 +18,7 @@ const reaction: Reaction<State, Event> = {
     entry: (state) => console.log(`[entry reaction] for ${state}`),
     exit: (state) => console.log(`[exit reaction] for ${state}`),
   },
-};
+});
 
 async function runnerInFPStyle() {
   console.log('trying FP style');

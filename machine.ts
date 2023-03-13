@@ -120,8 +120,6 @@ function genForward<S extends Keyable, E>(
   return forwardFactory;
 }
 
-export const genInitialForward = genForward;
-
 // "OOP" style
 function genForwarder<S extends Keyable, E>(
   handle: StateToState<S, E>,
@@ -151,4 +149,15 @@ function genForwarder<S extends Keyable, E>(
   };
 }
 
-export const genInitialForwarder = genForwarder;
+const genDefineReaction =
+  <S extends Keyable, E>() => (reaction: Reaction<S, E>) => reaction;
+
+// use like below to expose interface to be used
+// `export const { ... } = genInterfaces<S..., E...>`
+export const genInterfaces = <S extends Keyable, E>(
+  handle: StateToState<S, E>,
+) => ({
+  initialForward: genForward<S, E>(handle),
+  initialForwarder: genForwarder<S, E>(handle),
+  defineReaction: genDefineReaction<S, E>(),
+});

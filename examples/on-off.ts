@@ -1,5 +1,5 @@
 import { match, P } from 'npm:ts-pattern';
-import { genInitialForward, genInitialForwarder, timeout } from '../machine.ts';
+import { genInterfaces, timeout } from '../machine.ts';
 
 export enum State {
   off,
@@ -58,6 +58,8 @@ const handle = async (s: State, e: Event) =>
     })
     .exhaustive();
 
-export const initialForward = genInitialForward<State, Event>(handle);
-
-export const initialForwarder = genInitialForwarder<State, Event>(handle);
+export const { initialForward, initialForwarder, defineReaction } =
+  genInterfaces<
+    State,
+    Event
+  >(handle);

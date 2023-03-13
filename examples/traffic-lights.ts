@@ -1,5 +1,5 @@
 import { match, P } from 'npm:ts-pattern';
-import { genInitialForward, Reaction, timeout } from '../machine.ts';
+import { genInterfaces, timeout } from '../machine.ts';
 
 export enum State {
   green,
@@ -40,7 +40,7 @@ const handle = async (s: State, e: Event) =>
     })
     .exhaustive();
 
-const initialForward = genInitialForward<State, Event>(handle);
+const { initialForward, defineReaction } = genInterfaces<State, Event>(handle);
 
 function contextPerState(state: State) {
   return match(state)
@@ -50,7 +50,7 @@ function contextPerState(state: State) {
     .exhaustive();
 }
 
-const reaction: Reaction<State, Event> = {
+const reaction = defineReaction({
   '*': {
     entry: (state, forward) => {
       const { name, delay } = contextPerState(state);
@@ -58,7 +58,7 @@ const reaction: Reaction<State, Event> = {
       forward(delayedNext(delay));
     },
   },
-};
+});
 
 export const startTrafficLights = (state: State) =>
   initialForward(state, { reaction });
