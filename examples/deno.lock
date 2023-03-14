@@ -3,6 +3,7 @@
   "remote": {},
   "npm": {
     "specifiers": {
+      "ts-pattern": "ts-pattern@4.2.1",
       "ts-pattern@^4.2": "ts-pattern@4.2.1"
     },
     "packages": {

@@ -31,7 +31,7 @@ export type Event = DelayedNext;
 
 const handle = async (s: State, e: Event) =>
   await match(e)
-    .with(delayedNext(P.number), async ({ delay }) => {
+    .with(delayedNext(P.number), async ({ delay }: DelayedNext) => {
       await timeout(delay * 1000);
       return match(s)
         .with(State.green, () => State.yellow)

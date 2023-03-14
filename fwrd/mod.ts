@@ -28,6 +28,10 @@ export type Reaction<S extends Keyable, E> =
     Record<Wildcard, ReactionBundle<S, E>>
   >;
 
+export type Children<S extends Keyable, E> = Partial<
+  Record<S, InjectFetch<S, E>>
+>;
+
 export function timeout(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -84,6 +88,7 @@ const reactOnEntry = <S extends Keyable, R extends Reaction<S, E>, E>(
 
 type ForwardFactoryOptions<S extends Keyable, E> = {
   reaction?: Reaction<S, E>;
+  children?: Children<S, E>;
   skipInitialReaction?: boolean;
 };
 
@@ -130,14 +135,25 @@ function genForward<S extends Keyable, E>(
   return forwardFactory;
 }
 
-type Init<S, E> = (f: () => FetchForwardState<S, E>) => void;
-export const genDefineInit = <S extends Keyable, E>() => (init: Init<S, E>) =>
-  init;
+type InjectFetch<S, E> = (f: () => FetchForwardState<S, E>) => void;
+export const genDefineInit =
+  <S extends Keyable, E>() => (init: InjectFetch<S, E>) => init;
+
+function callbackChildren<S extends Keyable, E>(
+  state: S,
+  fetch: () => FetchForwardState<S, E>,
+  children: Children<S, E> = {},
+) {
+  const cb = children[state];
+  if (cb) {
+    cb(fetch);
+  }
+}
 
 // "OOP" style
 function createMachine<S extends Keyable, E>(
   handle: StateToState<S, E>,
-  init?: Init<S, E>,
+  init?: InjectFetch<S, E>,
 ) {
   const factory = genForward(handle);
 
@@ -145,6 +161,7 @@ function createMachine<S extends Keyable, E>(
     state: S,
     options: ForwardFactoryOptions<S, E> = {
       reaction: {},
+      children: {},
       skipInitialReaction: false,
     },
   ) => {
@@ -156,20 +173,29 @@ function createMachine<S extends Keyable, E>(
     let trackedState = state;
 
     const forward = async (e: E, s = trackedState) => {
-      const { state: ns, forward: f } = await privateForward(e, s);
-      privateForward = f;
-      trackedState = ns;
+      const { state: newState, forward: f } = await privateForward(e, s);
 
-      return ns;
+      getCbChildren(newState);
+
+      privateForward = f;
+      trackedState = newState;
+
+      return newState;
     };
 
+    const fetch = () => ({
+      state: trackedState,
+      forward,
+    });
+
     if (init) {
-      const fetch = () => ({
-        state: trackedState,
-        forward,
-      });
       init(fetch);
     }
+
+    const getCbChildren = (state: S) =>
+      callbackChildren(state, fetch, options.children);
+
+    getCbChildren(state);
 
     return forward;
   };
@@ -178,13 +204,21 @@ function createMachine<S extends Keyable, E>(
 const genDefineReaction =
   <S extends Keyable, E>() => (reaction: Reaction<S, E>) => reaction;
 
+const genDefineChildren =
+  <S extends Keyable, E>() => (children: Children<S, E>) => children;
+
+// const genInjectFetch =
+//   <S extends Keyable, E>() => (injectFetch: InjectFetch<S, E>) => injectFetch;
+
 // use like below to expose interface to be used
 // `export const { ... } = genInterfaces<S..., E...>`
 export const genInterfaces = <S extends Keyable, E>(
   handle: StateToState<S, E>,
-  init?: Init<S, E>,
+  init?: InjectFetch<S, E>,
 ) => ({
   initialForward: genForward<S, E>(handle),
   createMachine: createMachine<S, E>(handle, init),
   defineReaction: genDefineReaction<S, E>(),
+  defineChildren: genDefineChildren<S, E>(),
+  // defineFetchHook: genInjectFetch<S, E>(),
 });
