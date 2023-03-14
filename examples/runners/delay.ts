@@ -1,5 +1,12 @@
-import { createMachine } from '../delay.ts';
+import { createMachine, defineReaction, State } from '../delay.ts';
 
 export function runner() {
-  createMachine(2000);
+  const reaction = defineReaction({
+    [State.caughtUp]: {
+      entry: () => {
+        console.log(`caught up`);
+      },
+    },
+  });
+  createMachine(State.delayed, { reaction });
 }

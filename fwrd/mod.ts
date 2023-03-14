@@ -175,7 +175,7 @@ function createMachine<S extends Keyable, E>(
     const forward = async (e: E, s = trackedState) => {
       const { state: newState, forward: f } = await privateForward(e, s);
 
-      getCbChildren(newState);
+      cbChildrenWrapper(newState);
 
       privateForward = f;
       trackedState = newState;
@@ -192,10 +192,10 @@ function createMachine<S extends Keyable, E>(
       init(fetch);
     }
 
-    const getCbChildren = (state: S) =>
+    const cbChildrenWrapper = (state: S) =>
       callbackChildren(state, fetch, options.children);
 
-    getCbChildren(state);
+    cbChildrenWrapper(state);
 
     return forward;
   };

@@ -1,22 +1,67 @@
-import { timeout } from '../fwrd/mod.ts';
+import { match } from 'ts-pattern';
+import { genDefineInit, genInterfaces, timeout } from '../fwrd/mod.ts';
 import * as Pending from './pending.ts';
 import * as Timer from './timer.ts';
 
-export function createMachine(ms: number) {
+export enum State {
+  delayed,
+  caughtUp,
+}
+
+export enum Events {
+  catchup,
+}
+
+export type Event = Events;
+
+const handle = (s: State, e: Event) =>
+  Promise.resolve(
+    match(e)
+      .with(Events.catchup, () => s == State.delayed ? State.caughtUp : s)
+      .run(),
+  );
+
+const defineInit = genDefineInit<State, Event>();
+
+const init = defineInit((fetch) => {
+  const { forward } = fetch();
+
+  // i probably need a way to set context on initialization
+  kickOff(2000, () => {
+    forward(Events.catchup);
+  });
+});
+
+export const {
+  initialForward,
+  createMachine,
+  defineReaction,
+  defineChildren,
+} = genInterfaces<
+  State,
+  Event
+>(
+  handle,
+  init,
+);
+
+type GenericCallback = () => void;
+
+function kickOff(ms: number, markDone: GenericCallback) {
   const reaction = Pending.defineReaction({
     [Pending.State.entered]: {
       entry: () => {
-        console.log('pending entered');
+        // console.log('pending entered');
       },
     },
     [Pending.State.pending]: {
       entry: () => {
-        console.log('pending pending');
+        // console.log('pending pending');
       },
     },
     [Pending.State.done]: {
       entry: () => {
-        console.log('pending done');
+        markDone();
       },
     },
   });
