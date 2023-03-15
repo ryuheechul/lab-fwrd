@@ -58,8 +58,7 @@ const init = defineInit((fetch) => {
     '*': {
       entry: async (_onOffState, onOffForward) => {
         const { forward } = fetch();
-
-        const state = await forward(delayedNext(0));
+        const { state } = await forward(delayedNext(0));
         const { name, delay } = contextPerState(state);
         console.log(`entered ${name} light and will wait for ${delay} seconds`);
         onOffForward(delayedToggle(delay));

@@ -1,5 +1,5 @@
 import { match } from 'ts-pattern';
-import { genDefineInit, genInterfaces, timeout } from '../fwrd/mod.ts';
+import { genInterfaces, timeout } from '../fwrd/mod.ts';
 import * as Pending from './pending.ts';
 import * as Timer from './timer.ts';
 
@@ -9,7 +9,8 @@ export enum State {
 }
 
 export enum Events {
-  catchup,
+  catchUp,
+  putBack,
 }
 
 export type Event = Events;
@@ -17,20 +18,10 @@ export type Event = Events;
 const handle = (s: State, e: Event) =>
   Promise.resolve(
     match(e)
-      .with(Events.catchup, () => s == State.delayed ? State.caughtUp : s)
+      .with(Events.catchUp, () => s == State.delayed ? State.caughtUp : s)
+      .with(Events.putBack, () => s == State.caughtUp ? State.delayed : s)
       .run(),
   );
-
-const defineInit = genDefineInit<State, Event>();
-
-const init = defineInit((fetch) => {
-  const { forward } = fetch();
-
-  // i probably need a way to set context on initialization
-  kickOff(2000, () => {
-    forward(Events.catchup);
-  });
-});
 
 export const {
   initialForward,
@@ -42,31 +33,36 @@ export const {
   Event
 >(
   handle,
-  init,
 );
+
+export const children = defineChildren({
+  [State.delayed]: (fetch) => {
+    // I probably need a way to set context on initialization so that value like 2000 can be passed by the user of the machine
+    letChildrenDoActualWorks(2000, async () => {
+      const { forward } = fetch();
+      await forward(Events.catchUp);
+    });
+  },
+});
 
 type GenericCallback = () => void;
 
-function kickOff(ms: number, markDone: GenericCallback) {
+function letChildrenDoActualWorks(ms: number, done: GenericCallback) {
   const reaction = Pending.defineReaction({
-    [Pending.State.entered]: {
-      entry: () => {
-        // console.log('pending entered');
-      },
-    },
-    [Pending.State.pending]: {
-      entry: () => {
-        // console.log('pending pending');
-      },
-    },
     [Pending.State.done]: {
       entry: () => {
-        markDone();
+        done();
       },
     },
   });
 
-  const children = Pending.defineChildren({
+  const children = genChildrenForPendingMachine(ms);
+
+  Pending.createMachine(Pending.State.entered, { reaction, children });
+}
+
+const genChildrenForPendingMachine = (ms: number) =>
+  Pending.defineChildren({
     [Pending.State.entered]: (fetch) => {
       const reaction = Timer.defineReaction({
         [Timer.State.started]: {
@@ -88,6 +84,3 @@ function kickOff(ms: number, markDone: GenericCallback) {
       Timer.createMachine(Timer.State.started, { reaction });
     },
   });
-
-  Pending.createMachine(Pending.State.entered, { reaction, children });
-}
