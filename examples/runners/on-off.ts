@@ -12,11 +12,11 @@ import {
 
 const reaction = defineReaction({
   [State.on]: {
-    entry: (state) => console.log(`[entry reaction] for ${state}`),
+    entry: ({ state }) => console.log(`[entry reaction] for ${state}`),
   },
   [State.off]: {
-    entry: (state) => console.log(`[entry reaction] for ${state}`),
-    exit: (state) => console.log(`[exit reaction] for ${state}`),
+    entry: ({ state }) => console.log(`[entry reaction] for ${state}`),
+    exit: ({ state }) => console.log(`[exit reaction] for ${state}`),
   },
 });
 

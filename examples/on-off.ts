@@ -1,5 +1,5 @@
 import { match, P } from 'ts-pattern';
-import { genInterfaces, timeout } from '../fwrd/mod.ts';
+import { genAPI, noContext, timeout } from '../fwrd/mod.ts';
 
 export enum State {
   off,
@@ -79,9 +79,12 @@ const handle = async (s: State, e: Event) =>
 
 export const toBoolean = (s: State) => (s == State.off ? false : true);
 
-export const { initialForward, createMachine, defineReaction } = genInterfaces<
+export const { defineReaction, defineMachine } = genAPI<
   State,
   Event
->(
+>();
+
+export const { initialForward, createMachine } = defineMachine({
+  ...noContext,
   handle,
-);
+});

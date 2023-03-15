@@ -1,4 +1,4 @@
-import { children, createMachine, defineReaction, State } from '../delay.ts';
+import { createMachine, defineReaction, State } from '../delay.ts';
 
 export function runner() {
   const reaction = defineReaction({
@@ -8,7 +8,7 @@ export function runner() {
       },
     },
     [State.caughtUp]: {
-      entry: (_state, _forward) => {
+      entry: () => {
         console.log('delay machine - caught up');
 
         // await forward(Events.putBack); // this will make it goes forever
@@ -16,6 +16,5 @@ export function runner() {
     },
   });
 
-  //TODO: provide a ms to customize delay by user
-  createMachine(State.delayed, { reaction, children });
+  createMachine(State.delayed, { reaction, context: { delay: 2000 } });
 }

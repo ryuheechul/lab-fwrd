@@ -1,5 +1,5 @@
 import { match, P } from 'ts-pattern';
-import { genInterfaces, timeout } from '../../fwrd/mod.ts';
+import { genAPI, noContext, timeout } from '../../fwrd/mod.ts';
 
 export enum State {
   green,
@@ -40,7 +40,8 @@ const handle = async (s: State, e: Event) =>
     })
     .run();
 
-const { initialForward, defineReaction } = genInterfaces<State, Event>(handle);
+const { defineReaction, defineMachine } = genAPI<State, Event>();
+const { initialForward } = defineMachine({ ...noContext, handle });
 
 function contextPerState(state: State) {
   return match(state)
@@ -54,7 +55,7 @@ function contextPerState(state: State) {
 // see the use case of ../traffic-lights.ts instead
 const reaction = defineReaction({
   '*': {
-    entry: (state, forward) => {
+    entry: ({ state, forward }) => {
       const { name, delay } = contextPerState(state);
       console.log(`entered ${name} light and will wait for ${delay} seconds`);
       forward(delayedNext(delay));

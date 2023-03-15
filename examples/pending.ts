@@ -1,5 +1,5 @@
 import { match } from 'ts-pattern';
-import { genInterfaces } from '../fwrd/mod.ts';
+import { genAPI, noContext } from '../fwrd/mod.ts';
 
 export enum State {
   entered,
@@ -15,22 +15,25 @@ export enum Events {
 
 export type Event = Events;
 
-const handle = (s: State, e: Event) =>
-  Promise.resolve(
-    match(e)
-      .with(Events.startPending, () => s == State.entered ? State.pending : s)
-      .with(Events.markDone, () => s == State.pending ? State.done : s)
-      .run(),
-  );
-
 export const {
-  initialForward,
-  createMachine,
   defineReaction,
   defineChildren,
-} = genInterfaces<
+  defineMachine,
+  defineObtainHook,
+  defineHandle,
+} = genAPI<
   State,
   Event
->(
-  handle,
+>();
+
+const handle = defineHandle((s: State, e: Event) =>
+  match(e)
+    .with(Events.startPending, () => s == State.entered ? State.pending : s)
+    .with(Events.markDone, () => s == State.pending ? State.done : s)
+    .run()
 );
+
+export const { initialForward, createMachine } = defineMachine({
+  ...noContext,
+  handle,
+});

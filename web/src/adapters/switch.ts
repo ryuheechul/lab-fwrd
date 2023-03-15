@@ -3,7 +3,7 @@ import { createMachine, defineReaction, Events, State, toBoolean } from '../../l
 export function start(listen: (b: boolean) => void) {
   const reaction = defineReaction({
     '*': {
-      entry: (state: State) => {
+      entry: ({ state }) => {
         listen(toBoolean(state));
       },
     },
