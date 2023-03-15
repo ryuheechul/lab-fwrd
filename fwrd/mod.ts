@@ -17,7 +17,7 @@ type ReactionHandler<S, E, C> = (p: ObtainKit<S, E, C>) => void;
 type Machine<S extends Keyable, E, C> = {
   defaultContext: C;
   handle: StateToState<S, E>;
-  children?: Children<S, E, C>;
+  children?: ChildrenAmbiguous<S, E, C>;
 };
 
 type ReactionBundle<S, E, C> = {
@@ -49,6 +49,14 @@ export type Reaction<S extends Keyable, E, C> =
 export type Children<S extends Keyable, E, C> = Partial<
   Record<S, ObtainHook<S, E, C>>
 >;
+
+export type ChildrenWithOnce<S extends Keyable, E, C> = (
+  o: Obtain<S, E, C>,
+) => Children<S, E, C>;
+
+export type ChildrenAmbiguous<S extends Keyable, E, C> =
+  | Children<S, E, C>
+  | ChildrenWithOnce<S, E, C>;
 
 export function timeout(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -108,7 +116,7 @@ const reactOnEntry = <S extends Keyable, E, C>(
 function genForward<S extends Keyable, E, C>(
   defaultContext: C,
   handle: StateToState<S, E>,
-  children: Children<S, E, C> = {},
+  adaptChildren: ChildrenWithOnce<S, E, C> = () => ({}),
 ) {
   const initialPublicForward = (
     state: S,
@@ -174,6 +182,8 @@ function genForward<S extends Keyable, E, C>(
       init(obtain);
     }
 
+    const children = adaptChildren(obtain);
+
     cbChildrenWrapper(state);
 
     return skipInitialReaction ? { state, forward } : genResult(state);
@@ -198,9 +208,9 @@ function callbackChildren<S extends Keyable, E, C>(
 function genCreateMachine<S extends Keyable, E, C>(
   defaultContext: C,
   handle: StateToState<S, E>,
-  children: Children<S, E, C> = {},
+  adaptChildren: ChildrenWithOnce<S, E, C> = () => ({}),
 ) {
-  const factory = genForward(defaultContext, handle, children);
+  const factory = genForward(defaultContext, handle, adaptChildren);
 
   return (
     state: S,
@@ -229,18 +239,33 @@ function genCreateMachine<S extends Keyable, E, C>(
   };
 }
 
+const wrapChildren = <S extends Keyable, E, C>(
+  ambiguousChildren: ChildrenAmbiguous<S, E, C>,
+) => {
+  if (typeof ambiguousChildren === 'function') {
+    return ambiguousChildren as ChildrenWithOnce<S, E, C>;
+  }
+
+  return () => (ambiguousChildren as Children<S, E, C>);
+};
+
 const genDefineMachine =
   <S extends Keyable, E, C>() =>
-  ({ defaultContext, handle, children }: Machine<S, E, C>) => ({
-    initialForward: genForward(defaultContext, handle, children),
-    createMachine: genCreateMachine(defaultContext, handle, children),
+  ({ defaultContext, handle, children = {} }: Machine<S, E, C>) => ({
+    initialForward: genForward(defaultContext, handle, wrapChildren(children)),
+    createMachine: genCreateMachine(
+      defaultContext,
+      handle,
+      wrapChildren(children),
+    ),
   });
 
 const genDefineReaction =
   <S extends Keyable, E, C>() => (reaction: Reaction<S, E, C>) => reaction;
 
 const genDefineChildren =
-  <S extends Keyable, E, C>() => (children: Children<S, E, C>) => children;
+  <S extends Keyable, E, C>() => (children: ChildrenAmbiguous<S, E, C>) =>
+    wrapChildren(children);
 
 const genDefineInit =
   <S extends Keyable, E, C>() => (init: ObtainHook<S, E, C>) => init;
