@@ -20,7 +20,7 @@ const runChangeAboveTo9 = async () => await changeAboveTo9();
 const strForAbove = 'async ()=>await changeAboveTo9()';
 
 // Compact form: name and function
-Deno.test('hello world #1', async () => {
+Deno.test('basic job tests', async () => {
   const reaction = defineReaction({
     [State.created]: {
       entry: ({ context }) => {
