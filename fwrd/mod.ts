@@ -306,6 +306,8 @@ const genDefineHandle =
   <S extends Keyable, E, C>() => (handle: HandleAmbiguous<S, E, C>) =>
     resolveHandleResult(handle);
 
+const genDefineContext = <C>() => (c: C) => c;
+
 // use like below to expose interface to be used
 // `export const { ... } = genAPI<S..., E...>`
 export const genAPI = <
@@ -321,4 +323,5 @@ export const genAPI = <
   // `export const { ... } = defineMachine({...})
   defineMachine: genDefineMachine<S, E, C>(),
   defineHandle: genDefineHandle<S, E, C>(),
+  defineContext: genDefineContext<C>(),
 });

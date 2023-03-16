@@ -22,7 +22,7 @@ type Info = {
 };
 
 const msInSec = 1000;
-const info = (name: string, sec: number): Info => ({
+export const info = (name: string, sec: number): Info => ({
   name,
   delay: sec * msInSec,
 });
@@ -40,6 +40,7 @@ export const {
   defineReaction,
   defineChildren,
   defineHandle,
+  defineContext,
 } = genAPI<
   State,
   Event,
