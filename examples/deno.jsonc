@@ -1,5 +1,6 @@
 {
   "imports": {
+    "asserts": "https://deno.land/std@0.180.0/testing/asserts.ts",
     "ts-pattern": "npm:ts-pattern@^4.2"
   },
   // https://deno.land/manual@v1.31.2/getting_started/configuration_file#fmt

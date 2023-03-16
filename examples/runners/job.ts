@@ -25,5 +25,5 @@ export async function runner() {
   await setNextJob(() => Promise.resolve(console.log('that job')));
   await setNextJob(() => Promise.resolve(console.log('cool job')));
   await runNextJob();
-  setNextJob(emptyJob);
+  await setNextJob(emptyJob);
 }
