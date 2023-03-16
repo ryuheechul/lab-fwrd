@@ -58,9 +58,14 @@ export type Event = Events | DelayedOn | DelayedOff | DelayedToggle;
 
 const toggle = (s: State) => s == State.off ? State.on : State.off;
 
-const handle = async (s: State, e: Event) =>
-  await match(e)
-    .with(Events.toggle, () => toggle(s))
+export const { defineReaction, defineMachine, defineHandle } = genAPI<
+  State,
+  Event
+>();
+
+const handle = defineHandle(async ({ state, event }) =>
+  await match(event)
+    .with(Events.toggle, () => toggle(state))
     .with(Events.on, () => State.on)
     .with(Events.off, () => State.off)
     .with(delayedOn(P.number), async ({ delay }) => {
@@ -73,16 +78,12 @@ const handle = async (s: State, e: Event) =>
     })
     .with(delayedToggle(P.number), async ({ delay }) => {
       await timeout(delay * 1000);
-      return toggle(s);
+      return toggle(state);
     })
-    .run();
+    .run()
+);
 
 export const toBoolean = (s: State) => (s == State.off ? false : true);
-
-export const { defineReaction, defineMachine } = genAPI<
-  State,
-  Event
->();
 
 export const { initialForward, createMachine } = defineMachine({
   ...noContext,

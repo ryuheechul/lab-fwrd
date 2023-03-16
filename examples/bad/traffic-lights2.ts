@@ -29,36 +29,38 @@ export const delayedNext = (
 
 export type Event = DelayedNext;
 
-const handle = async (s: State, e: Event) =>
-  await match(e)
-    .with(delayedNext(P.number), async ({ delay }: DelayedNext) => {
-      await timeout(delay * 1000);
-      return match(s)
-        .with(State.green, () => State.yellow)
-        .with(State.yellow, () => State.red)
-        .with(State.red, () => State.green)
-        .run();
-    })
-    .run();
-
-export function contextPerState(state: State) {
-  return match(state)
-    .with(State.green, () => ({ name: '[green]', delay: 3 }))
-    .with(State.yellow, () => ({ name: '[yellow]', delay: 1 }))
-    .with(State.red, () => ({ name: '[red]', delay: 2 }))
-    .run();
-}
-
 export const {
   defineMachine,
   defineChildren,
   defineInit,
   defineReaction,
+  defineHandle,
   defineObtainHook,
 } = genAPI<
   State,
   Event
 >();
+
+const handle = defineHandle(async ({ state, event }) =>
+  await match(event)
+    .with(delayedNext(P.number), async ({ delay }: DelayedNext) => {
+      await timeout(delay * 1000);
+      return match(state)
+        .with(State.green, () => State.yellow)
+        .with(State.yellow, () => State.red)
+        .with(State.red, () => State.green)
+        .run();
+    })
+    .run()
+);
+
+export function contextPerState(state: State) {
+  return match(state).with(State.green, () => ({ name: '[green]', delay: 3 }))
+    .with(State.yellow, () => ({ name: '[yellow]', delay: 1 })).with(
+      State.red,
+      () => ({ name: '[red]', delay: 2 }),
+    ).run();
+}
 
 const letChildrenDoActualWorks = defineObtainHook((obtain) => {
   const { defineReaction, initialForward, delayedToggle } = OnOff;
@@ -84,14 +86,14 @@ const letChildrenDoActualWorks = defineObtainHook((obtain) => {
 });
 
 const children = defineChildren({
-  [State.green]: (fetch) => {
-    letChildrenDoActualWorks(fetch);
+  [State.green]: (obtain) => {
+    letChildrenDoActualWorks(obtain);
   },
-  [State.yellow]: (fetch) => {
-    letChildrenDoActualWorks(fetch);
+  [State.yellow]: (obtain) => {
+    letChildrenDoActualWorks(obtain);
   },
-  [State.red]: (fetch) => {
-    letChildrenDoActualWorks(fetch);
+  [State.red]: (obtain) => {
+    letChildrenDoActualWorks(obtain);
   },
 });
 

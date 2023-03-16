@@ -33,18 +33,18 @@ export const {
   Context
 >();
 
-const handle = defineHandle((s: State, e: Event) =>
-  match(e)
-    .with(Events.catchUp, () => s == State.delayed ? State.caughtUp : s)
-    .with(Events.putBack, () => s == State.caughtUp ? State.delayed : s)
+const handle = defineHandle(({ state, event }) =>
+  match(event)
+    .with(Events.catchUp, () => state == State.delayed ? State.caughtUp : state)
+    .with(Events.putBack, () => state == State.caughtUp ? State.delayed : state)
     .run()
 );
 
 const children = defineChildren({
-  [State.delayed]: (fetch) => {
-    const { context } = fetch();
+  [State.delayed]: (obtain) => {
+    const { context } = obtain();
     letChildrenDoActualWorks(context.delay, async () => {
-      const { forward } = fetch();
+      const { forward } = obtain();
       await forward(Events.catchUp);
     });
   },

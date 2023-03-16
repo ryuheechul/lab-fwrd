@@ -26,10 +26,12 @@ export const {
   Event
 >();
 
-const handle = defineHandle((s: State, e: Event) =>
-  match(e)
-    .with(Events.startPending, () => s == State.entered ? State.pending : s)
-    .with(Events.markDone, () => s == State.pending ? State.done : s)
+const handle = defineHandle(({ state, event }) =>
+  match(event)
+    .with(Events.startPending, () =>
+      state == State.entered ? State.pending : state)
+    .with(Events.markDone, () =>
+      state == State.pending ? State.done : state)
     .run()
 );
 

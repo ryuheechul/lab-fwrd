@@ -23,9 +23,9 @@ export const { defineMachine, defineReaction, defineChildren, defineHandle } =
     Context
   >();
 
-const handle = defineHandle((s: State, e: Event) =>
-  match(e)
-    .with(Events.wentOff, () => s == State.started ? State.ended : s)
+const handle = defineHandle(({ state, event }) =>
+  match(event)
+    .with(Events.wentOff, () => state == State.started ? State.ended : state)
     .run()
 );
 

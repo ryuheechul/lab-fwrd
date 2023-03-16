@@ -39,11 +39,11 @@ async function runnerInOOPStyle() {
   const advance = createMachine(state, { reaction });
 
   console.log(`forward from ${state} with delayedOn(2)`);
-  state = await advance(delayedOn(2));
+  ({ state } = await advance(delayedOn(2)));
   console.log(`forward from ${state} with delayedOff(1)`);
-  state = await advance(delayedOff(1));
+  ({ state } = await advance(delayedOff(1)));
   console.log(`forward from ${state} with toggle`);
-  state = await advance(Events.toggle);
+  ({ state } = await advance(Events.toggle));
   console.log(`finalState: ${state}`);
 }
 

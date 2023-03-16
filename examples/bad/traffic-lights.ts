@@ -28,19 +28,21 @@ export const delayedNext = (
 
 export type Event = DelayedNext;
 
-const handle = async (s: State, e: Event) =>
-  await match(e)
+const { defineReaction, defineMachine, defineHandle } = genAPI<State, Event>();
+
+const handle = defineHandle(async ({ state, event }) =>
+  await match(event)
     .with(delayedNext(P.number), async ({ delay }) => {
       await timeout(delay * 1000);
-      return match(s)
+      return match(state)
         .with(State.green, () => State.yellow)
         .with(State.yellow, () => State.red)
         .with(State.red, () => State.green)
         .run();
     })
-    .run();
+    .run()
+);
 
-const { defineReaction, defineMachine } = genAPI<State, Event>();
 const { initialForward } = defineMachine({ ...noContext, handle });
 
 function contextPerState(state: State) {

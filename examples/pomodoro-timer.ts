@@ -1,5 +1,6 @@
 import { genAPI } from '../fwrd/mod.ts';
 import * as Timer from './timer.ts';
+import { createJobStore } from './job.ts';
 
 export enum State {
   stopped,
@@ -28,9 +29,6 @@ const info = (name: string, sec: number): Info => ({
 
 type Context = Record<State, Info>;
 
-type Job = () => Promise<void>;
-const emptyJob: Job = () => Promise.resolve();
-
 const defaultContext = {
   [State.started]: info('Running', 3),
   [State.onBreak]: info('On a break', 1),
@@ -48,41 +46,43 @@ export const {
   Context
 >();
 
-const handle = defineHandle((_s: State, e: Event) => ({
+const handle = defineHandle(({ event }) => ({
   [Events.start]: State.started,
   [Events.stop]: State.stopped,
   [Events.haveBreak]: State.onBreak,
-}[e]));
+}[event]));
 
 const children = defineChildren(() => {
-  let nextJob = emptyJob;
+  const { runNextJob, setNextJob, emptyJob } = createJobStore();
 
   return {
-    [State.stopped]: () => {
+    [State.stopped]: async () => {
       // basically cancel the job
-      nextJob = emptyJob;
+      await setNextJob(emptyJob);
     },
-    [State.started]: (obtain) => {
+    [State.started]: async (obtain) => {
       const { context, state } = obtain();
       const { delay } = context[state];
 
-      nextJob = async () => {
+      await setNextJob(async () => {
         const { forward } = obtain();
         await forward(Events.haveBreak);
-      };
+      });
 
-      runTimer(delay, async () => await nextJob());
+      runTimer(delay, runNextJob);
     },
-    [State.onBreak]: (obtain) => {
+    [State.onBreak]: async (obtain) => {
       const { context, state } = obtain();
       const { delay } = context[state];
 
-      nextJob = async () => {
-        const { forward } = obtain();
-        await forward(Events.start);
-      };
+      await setNextJob(
+        async () => {
+          const { forward } = obtain();
+          await forward(Events.start);
+        },
+      );
 
-      runTimer(delay, async () => await nextJob());
+      runTimer(delay, runNextJob);
     },
   };
 });

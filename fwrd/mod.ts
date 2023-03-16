@@ -1,14 +1,23 @@
-type StateToState<S, E> = (s: S, e: E) => Promise<S>;
-type StateToStateNoPromise<S, E> = (s: S, e: E) => S;
-type StateToStateAmbiguous<S, E> =
-  | StateToState<S, E>
-  | StateToStateNoPromise<S, E>;
+type HandleParams<S, E, C> = {
+  state: S;
+  event: E;
+  updateContext?: (c: C) => void;
+};
+type Handle<S, E, C> = (p: HandleParams<S, E, C>) => Promise<S>;
+type HandleBare<S, E, C> = (p: HandleParams<S, E, C>) => S;
+type HandleAmbiguous<S, E, C> =
+  | Handle<S, E, C>
+  | HandleBare<S, E, C>;
 
-type ForwardReturn<S, E> = { state: S; forward: Forward<S, E> };
+type ForwardReturn<S, E, C> = {
+  state: S;
+  forward: Forward<S, E, C>;
+  context: C;
+};
 
-type Forward<S, E> = (e: E, s?: S) => Promise<ForwardReturn<S, E>>;
+type Forward<S, E, C> = (e: E, s?: S) => Promise<ForwardReturn<S, E, C>>;
 
-type ObtainKit<S, E, C> = { state: S; forward: Forward<S, E>; context: C };
+type ObtainKit<S, E, C> = { state: S; forward: Forward<S, E, C>; context: C };
 type Obtain<S, E, C> = () => ObtainKit<S, E, C>;
 type ObtainHook<S, E, C> = (o: Obtain<S, E, C>) => void;
 
@@ -16,7 +25,7 @@ type ReactionHandler<S, E, C> = (p: ObtainKit<S, E, C>) => void;
 
 type Machine<S extends Keyable, E, C> = {
   defaultContext: C;
-  handle: StateToState<S, E>;
+  handle: Handle<S, E, C>;
   children?: ChildrenAmbiguous<S, E, C>;
 };
 
@@ -30,7 +39,7 @@ type Keyable = string | number | symbol;
 type Wildcard = '*';
 const wildcard: Wildcard = '*' as const;
 
-type BaseContext = Record<Keyable, unknown>;
+export type BaseContext = Record<Keyable, unknown>;
 const bareContext: BaseContext = {};
 // I couldn't find a way yet to provide this by default for all generics
 // so machine creator will have to do the below in case no context is being used
@@ -115,7 +124,7 @@ const reactOnEntry = <S extends Keyable, E, C>(
 // - optionally expose `handle` if to provide a pure functional calculation based on the previous state and an event
 function genForward<S extends Keyable, E, C>(
   defaultContext: C,
-  handle: StateToState<S, E>,
+  handle: Handle<S, E, C>,
   adaptChildren: ChildrenWithOnce<S, E, C> = () => ({}),
 ) {
   const initialPublicForward = (
@@ -129,11 +138,18 @@ function genForward<S extends Keyable, E, C>(
       init,
     } = options;
 
+    let trackedState = state;
+    let trackedContext = context;
+
     const obtain = () => ({
       state: trackedState,
       forward,
-      context, // in the future where context also gets updated, this would `trackedContext`
+      context: trackedContext,
     });
+
+    const updateContext = (c: C) => {
+      trackedContext = c;
+    };
 
     const handleWithExitReaction = async (
       event: E,
@@ -144,12 +160,14 @@ function genForward<S extends Keyable, E, C>(
         // should react to the actual previous one on exit,
         // thus `actualPreviousState` not `eitherActualOrRequestedPreviousState`
         actualPreviousState,
-        await handle(eitherActualOrRequestedPreviousState, event),
+        await handle({
+          state: eitherActualOrRequestedPreviousState,
+          event,
+          updateContext,
+        }),
         obtain,
         reaction,
       );
-
-    let trackedState = state;
 
     const genResult = (state: S) => ({
       state: reactOnEntry(
@@ -158,9 +176,10 @@ function genForward<S extends Keyable, E, C>(
         reaction,
       ),
       forward,
+      context: trackedContext,
     });
 
-    const forward: Forward<S, E> = async (e: E, s = trackedState) => {
+    const forward: Forward<S, E, C> = async (e: E, s = trackedState) => {
       const newState = await handleWithExitReaction(
         e,
         trackedState,
@@ -207,7 +226,7 @@ function callbackChildren<S extends Keyable, E, C>(
 // this is just a wrapper of `genForward` anyway
 function genCreateMachine<S extends Keyable, E, C>(
   defaultContext: C,
-  handle: StateToState<S, E>,
+  handle: Handle<S, E, C>,
   adaptChildren: ChildrenWithOnce<S, E, C> = () => ({}),
 ) {
   const factory = genForward(defaultContext, handle, adaptChildren);
@@ -227,12 +246,15 @@ function genCreateMachine<S extends Keyable, E, C>(
     let trackedState = state;
 
     const advance = async (e: E, s = trackedState) => {
-      const { state: newState, forward: f } = await forward(e, s);
+      const { state: newState, forward: f, context } = await forward(e, s);
 
       forward = f;
       trackedState = newState;
 
-      return newState;
+      return {
+        state: newState,
+        context,
+      };
     };
 
     return advance;
@@ -275,13 +297,13 @@ const genObtainHook =
     obtainHook;
 
 // Now the result of handle can be both promise or not
-const resolveHandleResult = <S, E>(
-  potentialBareHandle: StateToStateAmbiguous<S, E>,
+const resolveHandleResult = <S, E, C>(
+  potentialBareHandle: HandleAmbiguous<S, E, C>,
 ) =>
-(s: S, e: E) => Promise.resolve(potentialBareHandle(s, e));
+(p: HandleParams<S, E, C>) => Promise.resolve(potentialBareHandle(p));
 
 const genDefineHandle =
-  <S extends Keyable, E>() => (handle: StateToStateAmbiguous<S, E>) =>
+  <S extends Keyable, E, C>() => (handle: HandleAmbiguous<S, E, C>) =>
     resolveHandleResult(handle);
 
 // use like below to expose interface to be used
@@ -298,5 +320,5 @@ export const genAPI = <
   // use like below to expose interface to be used
   // `export const { ... } = defineMachine({...})
   defineMachine: genDefineMachine<S, E, C>(),
-  defineHandle: genDefineHandle<S, E>(),
+  defineHandle: genDefineHandle<S, E, C>(),
 });

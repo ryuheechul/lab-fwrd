@@ -43,10 +43,10 @@ export const {
   Context
 >();
 
-const handle = defineHandle((s: State, e: Event) =>
-  match(e)
+const handle = defineHandle(({ state, event }) =>
+  match(event)
     .with(Events.next, () => {
-      return match(s)
+      return match(state)
         .with(State.green, () => State.yellow)
         .with(State.yellow, () => State.red)
         .with(State.red, () => State.green)
