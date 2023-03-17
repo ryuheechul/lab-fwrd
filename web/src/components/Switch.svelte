@@ -1,16 +1,16 @@
 <script lang="ts">
   import { start } from '../adapters/switch';
 
-  let check = false;
+  export let isOn = false;
 
   const toggle = start((b) => {
-    check = b;
-  });
+    isOn = b;
+  }, isOn);
 </script>
 
-<h3>Using on off machine for switch component</h3>
+<h3>Show traffic light - Using on off machine for switch component</h3>
 
 <label>
-  <input type="checkbox" value={check} on:click={toggle} />
-  {check}
+  <input type="checkbox" value={isOn} on:click={toggle} />
+  {isOn}
 </label>
