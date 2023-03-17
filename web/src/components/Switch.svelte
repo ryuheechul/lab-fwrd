@@ -11,6 +11,6 @@
 <h3>Show traffic light - Using on off machine for switch component</h3>
 
 <label>
-  <input type="checkbox" value={isOn} on:click={toggle} />
+  <input type="checkbox" checked={isOn} on:click={toggle} />
   {isOn}
 </label>

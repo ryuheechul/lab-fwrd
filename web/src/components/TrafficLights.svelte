@@ -8,6 +8,6 @@
   });
 </script>
 
-<h4>Using traffic-ligh machine to observe the status</h4>
+<h4>Using traffic-light machine to observe the current state</h4>
 
 {light}
