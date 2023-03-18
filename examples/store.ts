@@ -1,5 +1,5 @@
 import { match } from 'ts-pattern';
-import { BaseContext, genAPI } from '../fwrd/mod.ts';
+import { genAPI } from '../fwrd/mod.ts';
 
 // Yeah it's a bit of effort for a simple feature but still a prove the concept
 
@@ -14,7 +14,7 @@ export enum Events {
   getValue,
 }
 
-export const genStore = <C extends BaseContext>(defaultContext: C) => {
+export const genStore = <C>(defaultContext: C) => {
   type SetValue = {
     _event: Events.setValue;
     value: C;
@@ -51,10 +51,15 @@ export const genStore = <C extends BaseContext>(defaultContext: C) => {
       .run()
   );
 
-  const { createMachine } = defineMachine({
-    defaultContext,
-    handle,
-  });
+  const { createMachine } = defineMachine(
+    {
+      defaultContext,
+      handle,
+      // `as Parameters ...` is necessary here with current typescript implementation ~= v4.9
+      // because this code still don't get to have any concrete type (even if defaultContext branches to null and non-null) at compile time
+      // but we know this will work in runtime
+    } as Parameters<typeof defineMachine>[0],
+  );
 
   return { createMachine, defineReaction, setValue, getValue };
 };

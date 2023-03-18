@@ -1,5 +1,5 @@
 import { match } from 'ts-pattern';
-import { genAPI, noContext } from '../fwrd/mod.ts';
+import { genAPI } from '../fwrd/mod.ts';
 
 export enum State {
   entered,
@@ -36,6 +36,5 @@ const handle = defineHandle(({ state, event }) =>
 );
 
 export const { initialForward, createMachine } = defineMachine({
-  ...noContext,
   handle,
 });

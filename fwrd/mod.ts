@@ -23,11 +23,15 @@ type ObtainHook<S, E, C> = (o: Obtain<S, E, C>) => void;
 
 type ReactionHandler<S, E, C> = (p: ObtainKit<S, E, C>) => void;
 
-type Machine<S extends Keyable, E, C> = {
-  defaultContext: C;
+type ContextMachine<S extends Keyable, E, C> = {
   handle: Handle<S, E, C>;
   children?: ChildrenAmbiguous<S, E, C>;
+  defaultContext: C;
 };
+
+type Machine<S extends Keyable, E, C> = C extends null
+  ? Omit<ContextMachine<S, E, C>, 'defaultContext'>
+  : ContextMachine<S, E, C>;
 
 type ReactionBundle<S, E, C> = {
   entry?: ReactionHandler<S, E, C>;
@@ -39,13 +43,7 @@ type Keyable = string | number | symbol;
 type Wildcard = '*';
 const wildcard: Wildcard = '*' as const;
 
-export type BaseContext = Record<Keyable, unknown>;
-const bareContext: BaseContext = {};
-// I couldn't find a way yet to provide this by default for all generics
-// so machine creator will have to do the below in case no context is being used
-// (but at least having to set a Phantom type is avoided thanks to `C extends BaseContext = BaseContext`)
-// do this `defineMachine({...noContext, ...})` to avoid having to do `defineMachine({ defaultContext: {}, ... })`
-export const noContext = { defaultContext: bareContext };
+const bareContext = null;
 
 export type Reaction<S extends Keyable, E, C> =
   & Partial<
@@ -271,16 +269,33 @@ const wrapChildren = <S extends Keyable, E, C>(
   return () => (ambiguousChildren as Children<S, E, C>);
 };
 
-const genDefineMachine =
-  <S extends Keyable, E, C>() =>
-  ({ defaultContext, handle, children = {} }: Machine<S, E, C>) => ({
-    initialForward: genForward(defaultContext, handle, wrapChildren(children)),
-    createMachine: genCreateMachine(
-      defaultContext,
+const genDefineMachine = <S extends Keyable, E, C>() =>
+(
+  m: Machine<S, E, C>,
+) => {
+  const {
+    handle,
+    children = {},
+  } = m;
+
+  let context = bareContext as C;
+  const wrappedChildren = wrapChildren<S, E, C>(children);
+
+  if ('defaultContext' in m) context = m.defaultContext as C;
+
+  return {
+    initialForward: genForward<S, E, C>(
+      context,
       handle,
-      wrapChildren(children),
+      wrappedChildren,
     ),
-  });
+    createMachine: genCreateMachine<S, E, C>(
+      context,
+      handle,
+      wrappedChildren,
+    ),
+  };
+};
 
 const genDefineReaction =
   <S extends Keyable, E, C>() => (reaction: Reaction<S, E, C>) => reaction;
@@ -313,7 +328,7 @@ const genDefineContext = <C>() => (c: C) => c;
 export const genAPI = <
   S extends Keyable,
   E,
-  C extends BaseContext = BaseContext,
+  C = null,
 >() => ({
   defineReaction: genDefineReaction<S, E, C>(),
   defineChildren: genDefineChildren<S, E, C>(),

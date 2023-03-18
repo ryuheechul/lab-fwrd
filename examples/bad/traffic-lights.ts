@@ -1,5 +1,5 @@
 import { match, P } from 'ts-pattern';
-import { genAPI, noContext, timeout } from '../../fwrd/mod.ts';
+import { genAPI, timeout } from '../../fwrd/mod.ts';
 
 export enum State {
   green,
@@ -43,7 +43,7 @@ const handle = defineHandle(async ({ state, event }) =>
     .run()
 );
 
-const { initialForward } = defineMachine({ ...noContext, handle });
+const { initialForward } = defineMachine({ handle });
 
 function contextPerState(state: State) {
   return match(state)

@@ -1,5 +1,5 @@
 import { match, P } from 'ts-pattern';
-import { genAPI, noContext, timeout } from '../../fwrd/mod.ts';
+import { genAPI, timeout } from '../../fwrd/mod.ts';
 import * as OnOff from '../on-off.ts';
 
 export enum State {
@@ -98,7 +98,6 @@ const children = defineChildren({
 });
 
 export const { initialForward, createMachine } = defineMachine({
-  ...noContext,
   handle,
   children,
 });
