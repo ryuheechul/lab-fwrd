@@ -4,14 +4,10 @@ import { State } from './store.ts';
 // NOTE: it's not a real machine but more of inheritance if you will
 
 type Job = () => Promise<void>;
-type JobContext = { run: Job };
-const emptyJob: Job = () => Promise.resolve();
-const defaultJobContext = { run: emptyJob };
+const emptyJob = () => Promise.resolve();
 
 const { createMachine: createStore, setValue, getValue, defineReaction } = Store
-  .genStore<
-    JobContext
-  >(defaultJobContext);
+  .genStore<Job>(emptyJob);
 
 export { defineReaction, State };
 
@@ -22,10 +18,10 @@ export const createJobStore = (
 
   const runNextJob = async () => {
     const { context } = await store(getValue());
-    await context.run();
+    await context();
   };
 
-  const setNextJob = async (run: Job) => await store(setValue({ run }));
+  const setNextJob = async (job: Job) => await store(setValue(job));
 
   // This is the API
   return { runNextJob, setNextJob, emptyJob };

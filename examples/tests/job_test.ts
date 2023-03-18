@@ -24,13 +24,13 @@ Deno.test('basic job tests', async () => {
   const reaction = defineReaction({
     [State.created]: {
       entry: ({ context }) => {
-        assertEquals(context.run.toString(), emptyJobStr);
+        assertEquals(context.toString(), emptyJobStr);
       },
     },
     [State.accessed]: {
       entry: ({ context }) => {
         assertEquals(
-          context.run.toString(),
+          context.toString(),
           index > 3 ? strForAbove : toString(consoleLog(jobNames[index - 1])),
         );
       },
@@ -38,7 +38,7 @@ Deno.test('basic job tests', async () => {
     [State.saved]: {
       entry: ({ context }) => {
         assertEquals(
-          context.run.toString(),
+          context.toString(),
           index > 3
             ? strForAbove
             : (index < 3 ? toString(consoleLog(jobNames[index])) : emptyJobStr),

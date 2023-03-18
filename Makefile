@@ -6,3 +6,7 @@ run: fmt
 fmt:
 	cd fwrd && $(MAKE) fmt
 	cd examples && $(MAKE) fmt
+
+.PHONY: test
+test:
+	cd examples && $(MAKE) test
