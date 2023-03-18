@@ -271,26 +271,26 @@ const wrapChildren = <S extends Keyable, E, C>(
 
 const genDefineMachine = <S extends Keyable, E, C>() =>
 (
-  m: Machine<S, E, C>,
+  m: Machine<S, E, C>, // to branch to require `defaultContext` when C is not a null type
 ) => {
   const {
+    defaultContext = bareContext as C,
     handle,
     children = {},
-  } = m;
+  } = m as ContextMachine<S, E, C>;
+  // above is safe to do so as long as we are aware of that
+  // `defaultContext` will not be delivered (or delivered with a `null` value) when C is a null type
 
-  let context = bareContext as C;
   const wrappedChildren = wrapChildren<S, E, C>(children);
-
-  if ('defaultContext' in m) context = m.defaultContext as C;
 
   return {
     initialForward: genForward<S, E, C>(
-      context,
+      defaultContext,
       handle,
       wrappedChildren,
     ),
     createMachine: genCreateMachine<S, E, C>(
-      context,
+      defaultContext,
       handle,
       wrappedChildren,
     ),
