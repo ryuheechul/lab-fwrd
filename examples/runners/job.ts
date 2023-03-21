@@ -4,17 +4,17 @@ export async function runner() {
   const reaction = defineReaction({
     [State.created]: {
       entry: ({ context }) => {
-        console.log(`job store created - ${context.run.toString()}`);
+        console.log(`job store created - ${context.toString()}`);
       },
     },
     [State.accessed]: {
       entry: ({ context }) => {
-        console.log(`job store accessed - ${context.run.toString()}`);
+        console.log(`job store accessed - ${context.toString()}`);
       },
     },
     [State.saved]: {
       entry: ({ context }) => {
-        console.log(`job store saved - ${context.run.toString()}`);
+        console.log(`job store saved - ${context.toString()}`);
       },
     },
   });

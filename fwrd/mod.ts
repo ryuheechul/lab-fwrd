@@ -43,8 +43,6 @@ type Keyable = string | number | symbol;
 type Wildcard = '*';
 const wildcard: Wildcard = '*' as const;
 
-const bareContext = null;
-
 export type Reaction<S extends Keyable, E, C> =
   & Partial<
     Record<S, ReactionBundle<S, E, C>>
@@ -274,7 +272,7 @@ const genDefineMachine = <S extends Keyable, E, C>() =>
   m: Machine<S, E, C>, // to branch to require `defaultContext` when C is not a null type
 ) => {
   const {
-    defaultContext = bareContext as C,
+    defaultContext = null as C,
     handle,
     children = {},
   } = m as ContextMachine<S, E, C>;
