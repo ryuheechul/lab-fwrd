@@ -16,12 +16,17 @@ type Context = {
 
 export type Event = Events;
 
-export const { defineMachine, defineReaction, defineChildren, defineHandle } =
-  genAPI<
-    State,
-    Event,
-    Context
-  >();
+export const {
+  defineMachine,
+  defineReaction,
+  defineChildren,
+  defineHandle,
+  defineContext,
+} = genAPI<
+  State,
+  Event,
+  Context
+>();
 
 const handle = defineHandle(({ state, event }) =>
   match(event)
@@ -40,7 +45,7 @@ const children = defineChildren({
 });
 
 export const { initialForward, createMachine } = defineMachine({
-  defaultContext: { ms: 0 },
+  initialContext: defineContext({ ms: 0 }),
   handle,
   children,
 });

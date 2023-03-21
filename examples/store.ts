@@ -14,7 +14,7 @@ export enum Events {
   getValue,
 }
 
-export const genStore = <C>(defaultContext: C) => {
+export const genStore = <C>(initialContext: C) => {
   type SetValue = {
     _event: Events.setValue;
     value: C;
@@ -53,10 +53,10 @@ export const genStore = <C>(defaultContext: C) => {
 
   const { createMachine } = defineMachine(
     {
-      defaultContext,
+      initialContext,
       handle,
       // `as Parameters ...` is necessary here with current typescript implementation ~= v4.9
-      // because this code still don't get to have any concrete type (even if defaultContext branches to null and non-null) at compile time
+      // because this code still don't get to have any concrete type (even if initialContext branches to null and non-null) at compile time
       // but we know this will work in runtime
     } as Parameters<typeof defineMachine>[0],
   );

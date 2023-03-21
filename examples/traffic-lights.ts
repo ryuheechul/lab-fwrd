@@ -24,12 +24,6 @@ const info = (name: string, delay: number): Info => ({ name, delay });
 
 type Context = Record<State, Info>;
 
-const defaultContext = {
-  [State.green]: info('green', 3),
-  [State.yellow]: info('green', 1),
-  [State.red]: info('green', 2),
-};
-
 export const {
   defineMachine,
   defineChildren,
@@ -37,11 +31,18 @@ export const {
   defineReaction,
   defineObtainHook,
   defineHandle,
+  defineContext,
 } = genAPI<
   State,
   Event,
   Context
 >();
+
+const initialContext = defineContext({
+  [State.green]: info('green', 3),
+  [State.yellow]: info('green', 1),
+  [State.red]: info('green', 2),
+});
 
 const handle = defineHandle(({ state, event }) =>
   match(event)
@@ -79,7 +80,7 @@ const children = defineChildren({
 });
 
 export const { initialForward, createMachine } = defineMachine({
-  defaultContext,
+  initialContext,
   handle,
   children,
 });

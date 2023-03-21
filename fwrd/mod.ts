@@ -5,9 +5,6 @@ type HandleParams<S, E, C> = {
 };
 type Handle<S, E, C> = (p: HandleParams<S, E, C>) => Promise<S>;
 type HandleBare<S, E, C> = (p: HandleParams<S, E, C>) => S;
-type HandleAmbiguous<S, E, C> =
-  | Handle<S, E, C>
-  | HandleBare<S, E, C>;
 
 type ForwardReturn<S, E, C> = {
   state: S;
@@ -25,12 +22,17 @@ type ReactionHandler<S, E, C> = (p: ObtainKit<S, E, C>) => void;
 
 type ContextMachine<S extends Keyable, E, C> = {
   handle: Handle<S, E, C>;
-  children?: ChildrenAmbiguous<S, E, C>;
-  defaultContext: C;
+  children?: ChildrenWithOnce<S, E, C>;
+  initialContext: C;
 };
 
+type NoContextMachine<S extends Keyable, E, C> = Omit<
+  ContextMachine<S, E, C>,
+  'initialContext'
+>;
+
 type Machine<S extends Keyable, E, C> = C extends null
-  ? Omit<ContextMachine<S, E, C>, 'defaultContext'>
+  ? NoContextMachine<S, E, C>
   : ContextMachine<S, E, C>;
 
 type ReactionBundle<S, E, C> = {
@@ -58,10 +60,6 @@ export type Children<S extends Keyable, E, C> = Partial<
 export type ChildrenWithOnce<S extends Keyable, E, C> = (
   o: Obtain<S, E, C>,
 ) => Children<S, E, C>;
-
-export type ChildrenAmbiguous<S extends Keyable, E, C> =
-  | Children<S, E, C>
-  | ChildrenWithOnce<S, E, C>;
 
 export function timeout(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -257,69 +255,75 @@ function genCreateMachine<S extends Keyable, E, C>(
   };
 }
 
-const wrapChildren = <S extends Keyable, E, C>(
-  ambiguousChildren: ChildrenAmbiguous<S, E, C>,
-) => {
+function defineChildren<S extends Keyable, E, C>(
+  children: ChildrenWithOnce<S, E, C>,
+): ChildrenWithOnce<S, E, C>;
+function defineChildren<S extends Keyable, E, C>(
+  children: Children<S, E, C>,
+): ChildrenWithOnce<S, E, C>;
+
+function defineChildren<S extends Keyable, E, C>(
+  ambiguousChildren: Children<S, E, C> | ChildrenWithOnce<S, E, C>,
+) {
   if (typeof ambiguousChildren === 'function') {
     return ambiguousChildren as ChildrenWithOnce<S, E, C>;
   }
 
   return () => (ambiguousChildren as Children<S, E, C>);
+}
+
+type MachineAPI<S extends Keyable, E, C> = {
+  initialForward: ReturnType<typeof genForward<S, E, C>>;
+  createMachine: ReturnType<typeof genCreateMachine<S, E, C>>;
 };
 
-const genDefineMachine = <S extends Keyable, E, C>() =>
-(
+function defineMachine<S extends Keyable, E, C>(
+  m: NoContextMachine<S, E, C>,
+): MachineAPI<S, E, C>;
+
+function defineMachine<S extends Keyable, E, C>(
+  m: ContextMachine<S, E, C>,
+): MachineAPI<S, E, C>;
+
+function defineMachine<S extends Keyable, E, C>(
   m: Machine<S, E, C>, // to branch to require `defaultContext` when C is not a null type
-) => {
+) {
   const {
-    defaultContext = null as C,
+    initialContext = null as C,
     handle,
-    children = {},
+    children = defineChildren<S, E, C>({}),
   } = m as ContextMachine<S, E, C>;
   // above is safe to do so as long as we are aware of that
   // `defaultContext` will not be delivered (or delivered with a `null` value) when C is a null type
 
-  const wrappedChildren = wrapChildren<S, E, C>(children);
-
   return {
     initialForward: genForward<S, E, C>(
-      defaultContext,
+      initialContext,
       handle,
-      wrappedChildren,
+      children,
     ),
     createMachine: genCreateMachine<S, E, C>(
-      defaultContext,
+      initialContext,
       handle,
-      wrappedChildren,
+      children,
     ),
   };
-};
-
-const genDefineReaction =
-  <S extends Keyable, E, C>() => (reaction: Reaction<S, E, C>) => reaction;
-
-const genDefineChildren =
-  <S extends Keyable, E, C>() => (children: ChildrenAmbiguous<S, E, C>) =>
-    wrapChildren(children);
-
-const genDefineInit =
-  <S extends Keyable, E, C>() => (init: ObtainHook<S, E, C>) => init;
-
-const genObtainHook =
-  <S extends Keyable, E, C>() => (obtainHook: ObtainHook<S, E, C>) =>
-    obtainHook;
+}
 
 // Now the result of handle can be both promise or not
-const resolveHandleResult = <S, E, C>(
-  potentialBareHandle: HandleAmbiguous<S, E, C>,
-) =>
-(p: HandleParams<S, E, C>) => Promise.resolve(potentialBareHandle(p));
+function defineHandle<S extends Keyable, E, C>(
+  handle: Handle<S, E, C>,
+): Handle<S, E, C>;
 
-const genDefineHandle =
-  <S extends Keyable, E, C>() => (handle: HandleAmbiguous<S, E, C>) =>
-    resolveHandleResult(handle);
+function defineHandle<S extends Keyable, E, C>(
+  handle: HandleBare<S, E, C>,
+): Handle<S, E, C>;
 
-const genDefineContext = <C>() => (c: C) => c;
+function defineHandle<S extends Keyable, E, C>(
+  potentialBareHandle: Handle<S, E, C> | HandleBare<S, E, C>,
+) {
+  return (p: HandleParams<S, E, C>) => Promise.resolve(potentialBareHandle(p));
+}
 
 // use like below to expose interface to be used
 // `export const { ... } = genAPI<S..., E...>`
@@ -328,13 +332,13 @@ export const genAPI = <
   E,
   C = null,
 >() => ({
-  defineReaction: genDefineReaction<S, E, C>(),
-  defineChildren: genDefineChildren<S, E, C>(),
-  defineInit: genDefineInit<S, E, C>(),
-  defineObtainHook: genObtainHook<S, E, C>(),
+  defineContext: (c: C) => c,
+  defineReaction: (reaction: Reaction<S, E, C>) => reaction,
+  defineInit: (init: ObtainHook<S, E, C>) => init,
+  defineObtainHook: (obtainHook: ObtainHook<S, E, C>) => obtainHook,
+  defineChildren: (defineChildren<S, E, C>),
+  defineHandle: (defineHandle<S, E, C>),
   // use like below to expose interface to be used
   // `export const { ... } = defineMachine({...})
-  defineMachine: genDefineMachine<S, E, C>(),
-  defineHandle: genDefineHandle<S, E, C>(),
-  defineContext: genDefineContext<C>(),
+  defineMachine: (defineMachine<S, E, C>),
 });

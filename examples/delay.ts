@@ -53,7 +53,7 @@ const children = defineChildren({
 export const {
   initialForward,
   createMachine,
-} = defineMachine({ defaultContext: { delay: 1000 }, handle, children });
+} = defineMachine({ initialContext: { delay: 1000 }, handle, children });
 
 type GenericCallback = () => void;
 

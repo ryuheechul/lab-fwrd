@@ -29,12 +29,6 @@ export const info = (name: string, sec: number): Info => ({
 
 type Context = Record<State, Info>;
 
-const defaultContext = {
-  [State.started]: info('Running', 3),
-  [State.onBreak]: info('On a break', 1),
-  [State.stopped]: info('Stopped', 0),
-};
-
 export const {
   defineMachine,
   defineReaction,
@@ -46,6 +40,12 @@ export const {
   Event,
   Context
 >();
+
+const initialContext = defineContext({
+  [State.started]: info('Running', 3),
+  [State.onBreak]: info('On a break', 1),
+  [State.stopped]: info('Stopped', 0),
+});
 
 const handle = defineHandle(({ event }) => ({
   [Events.start]: State.started,
@@ -91,7 +91,7 @@ const children = defineChildren(() => {
 export const {
   initialForward,
   createMachine,
-} = defineMachine({ defaultContext, handle, children });
+} = defineMachine({ initialContext, handle, children });
 
 type GenericCallback = () => void;
 
